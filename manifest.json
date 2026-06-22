@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Alliance Pro",
+  "version": "2.8",
+  "description": "Чек-лист (Зроблено/Залишилось/Комент), таймер зі звуком і нагадуванням, калькулятор і нотатки для chat.sender.ftband.net. Працює окремо від Sender Pro.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Alliance Pro",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": ["activeTab"],
+  "host_permissions": [
+    "*://chat.sender.ftband.net/*",
+    "*://operatordesk.ftband.net/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://chat.sender.ftband.net/*"],
+      "js": [
+        "js/storage.js",
+        "js/theme.js",
+        "js/draggable.js",
+        "js/operatordesk.js",
+        "js/calculator.js",
+        "js/notes.js",
+        "js/checklist.js",
+        "js/settings.js",
+        "js/main.js"
+      ],
+      "css": ["css/alliance.css"],
+      "run_at": "document_end"
+    }
+  ]
+}
