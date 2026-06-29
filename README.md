@@ -10,12 +10,14 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-4.8.6-5b6cff" alt="version">
+  <a href="https://github.com/scorli/soft-pro/releases/latest"><img src="https://img.shields.io/github/v/release/scorli/soft-pro?label=release&color=5b6cff" alt="release"></a>
   <img src="https://img.shields.io/badge/manifest-v3-19b36b" alt="mv3">
   <img src="https://img.shields.io/badge/browser-Chrome%20%7C%20Edge-0ea5e9" alt="browser">
 </p>
 
 <p align="center">
+  <a href="https://github.com/scorli/soft-pro/releases/latest"><b>⬇️ Завантажити останню версію (Releases)</b></a>
+  &nbsp;·&nbsp;
   <a href="CHANGELOG.md">📜 Список змін (CHANGELOG)</a>
 </p>
 
@@ -41,10 +43,11 @@
 > робиться один раз і займає ~1 хвилину.
 
 **1. Завантажте файли.**
-На сторінці репозиторію натисніть зелену кнопку **Code → Download ZIP**
-(або візьміть `soft-pro-X.Y.Z.zip` з розділу [Releases](../../releases)).
+Візьміть `soft-pro-X.Y.Z.zip` з розділу
+[**Releases** (остання версія)](https://github.com/scorli/soft-pro/releases/latest)
+(або зелена кнопка **Code → Download ZIP**).
 Розпакуйте архів у будь-яку постійну папку (не видаляйте її потім —
-розширення працює з неї).
+розширення працює з неї). В архіві вже є папка `soft-pro` — саме її й використовуйте.
 
 **2. Відкрийте сторінку розширень.**
 У Chrome введіть в адресному рядку `chrome://extensions`
@@ -66,9 +69,11 @@
 Відкрийте (або оновіть) `chat.sender.ftband.net` — панель **Soft Pro** з'явиться
 у правому верхньому куті сторінки.
 
-> **Оновлення версії:** завантажте нову версію, розпакуйте поверх старої папки
-> (або в нову й оберіть її), потім на `chrome://extensions` натисніть кнопку
-> оновлення (⟳) на картці Soft Pro. Налаштування та дані чатів зберігаються.
+> **Оновлення версії:** завантажте новий архів із [Releases](https://github.com/scorli/soft-pro/releases/latest)
+> і розпакуйте папку `soft-pro` **поверх старої** (з заміною файлів), потім на
+> `chrome://extensions` натисніть кнопку оновлення (⟳) на картці Soft Pro.
+> Повторно підключати розширення (Load unpacked) не треба — назва папки незмінна.
+> Налаштування та дані чатів зберігаються.
 
 ---
 

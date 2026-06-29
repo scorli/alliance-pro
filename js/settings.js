@@ -436,7 +436,7 @@
 
     const footer = document.createElement("div");
     footer.className = "ap-modal-footer";
-    footer.textContent = "Soft Pro v4.8.6 by @Nilfa";
+    footer.textContent = "Soft Pro v4.8.7 by @Nilfa";
     wrap.appendChild(footer);
 
     const m = makeModal(wrap);
