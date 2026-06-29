@@ -67,6 +67,13 @@
     if (r) r.style.zoom = s;
   }
 
+  // Поточний масштаб панелі (zoom). Потрібен для коректного перетягування та
+  // зміни висоти: курсор рухається в реальних пікселях, а всередині zoom-елемента
+  // CSS-пікселі множаться на масштаб, тож зсуви треба ділити на нього.
+  function getScale() {
+    return Math.max(0.7, Math.min(1.6, parseFloat(AP.storage.getSettings().uiScale) || 1));
+  }
+
   function setScale(scale) {
     const s = Math.max(0.7, Math.min(1.6, parseFloat(scale) || 1));
     AP.storage.patchSettings({ uiScale: s });
@@ -79,5 +86,5 @@
     applyScale(AP.storage.getSettings().uiScale);
   }
 
-  AP.theme = { init, apply, set, toggle, current, applyAccent, setAccent, applyScale, setScale, PRESETS };
+  AP.theme = { init, apply, set, toggle, current, applyAccent, setAccent, applyScale, setScale, getScale, PRESETS };
 })();

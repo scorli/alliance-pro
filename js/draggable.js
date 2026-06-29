@@ -19,12 +19,19 @@
       container.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
     }
 
+    function scaleFactor() {
+      return (AP.theme && AP.theme.getScale) ? AP.theme.getScale() : 1;
+    }
+
     function dragStart(e) {
       if (e.type === "mousedown" && e.button !== 0) return;
       if (e.target.closest("button, input, textarea, .ap-icon-btn")) return;
       const point = e.touches ? e.touches[0] : e;
-      startX = point.clientX - offsetX;
-      startY = point.clientY - offsetY;
+      const scale = scaleFactor();
+      // offsetX/Y — це значення translate у локальних (до-zoom) пікселях; курсор
+      // рухається в реальних, тож множимо/ділимо на масштаб.
+      startX = point.clientX - offsetX * scale;
+      startY = point.clientY - offsetY * scale;
       isDragging = true;
       document.body.style.userSelect = "none";
       if (e.type === "touchstart") e.preventDefault();
@@ -34,16 +41,18 @@
       if (!isDragging) return;
       e.preventDefault();
       const point = e.touches ? e.touches[0] : e;
-      let nextX = point.clientX - startX;
-      let nextY = point.clientY - startY;
+      const scale = scaleFactor();
+      let nextX = (point.clientX - startX) / scale;
+      let nextY = (point.clientY - startY) / scale;
 
-      const rect = container.getBoundingClientRect();
-      const curLeft = rect.left - offsetX;
-      const curTop = rect.top - offsetY;
-      const minX = -curLeft + 4;
-      const maxX = window.innerWidth - rect.width - curLeft - 4;
-      const minY = -curTop + 4;
-      const maxY = window.innerHeight - rect.height - curTop - 4;
+      const rect = container.getBoundingClientRect(); // реальні (після zoom) пікселі
+      const baseLeft = rect.left - offsetX * scale;   // позиція при translate = 0
+      const baseTop = rect.top - offsetY * scale;
+      // Межі рахуємо в реальних пікселях, потім переводимо в локальні (÷ scale).
+      const minX = (4 - baseLeft) / scale;
+      const maxX = (window.innerWidth - rect.width - 4 - baseLeft) / scale;
+      const minY = (4 - baseTop) / scale;
+      const maxY = (window.innerHeight - rect.height - 4 - baseTop) / scale;
 
       nextX = Math.max(minX, Math.min(maxX, nextX));
       nextY = Math.max(minY, Math.min(maxY, nextY));

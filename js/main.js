@@ -335,7 +335,10 @@
       return;
     }
     if (h && h > 0) {
-      c.style.height = clampHeight(h) + "px";
+      // panelHeight зберігається в реальних пікселях; усередині zoom-елемента
+      // CSS-висота множиться на масштаб, тож ділимо, щоб рендер збігся.
+      const scale = (AP.theme && AP.theme.getScale) ? AP.theme.getScale() : 1;
+      c.style.height = (clampHeight(h) / scale) + "px";
       c.style.maxHeight = "none";
     } else {
       c.style.height = "";
@@ -355,8 +358,10 @@
     const onMove = (e) => {
       if (!dragging) return;
       const y = e.touches ? e.touches[0].clientY : e.clientY;
+      const scale = (AP.theme && AP.theme.getScale) ? AP.theme.getScale() : 1;
+      // курсор у реальних пікселях; startH теж реальний → CSS-висоту ділимо на масштаб
       const h = clampHeight(startH + (y - startY));
-      container.style.height = h + "px";
+      container.style.height = (h / scale) + "px";
       container.style.maxHeight = "none";
       e.preventDefault();
     };
