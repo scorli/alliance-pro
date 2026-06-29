@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Soft Pro",
-  "version": "4.8.7",
-  "description": "Робоча панель оператора: чек-лист за подіями (341/ДВЗ/349/290-353), режим Чат/Телефонія, таймер, калькулятор і нотатки для chat.sender.ftband.net. Калькулятор і таймер можна вмикати на інших сайтах.",
+  "version": "4.8.8",
+  "description": "Робоча панель оператора: чек-лист за подіями (341/ДВЗ/349/290-353), режим Чат/Телефонія, таймер, калькулятор і нотатки для chat.sender.ftband.net і сайтів телефонії. Калькулятор і таймер можна вмикати на інших сайтах.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -19,14 +19,20 @@
   "permissions": ["activeTab", "storage", "alarms", "notifications"],
   "host_permissions": [
     "*://chat.sender.ftband.net/*",
-    "*://operatordesk.ftband.net/*"
+    "*://operatordesk.ftband.net/*",
+    "*://cc-fina.ftband.net/*",
+    "*://harvester-caller.ftband.net/*"
   ],
   "background": {
     "service_worker": "js/background.js"
   },
   "content_scripts": [
     {
-      "matches": ["*://chat.sender.ftband.net/*"],
+      "matches": [
+        "*://chat.sender.ftband.net/*",
+        "*://cc-fina.ftband.net/*",
+        "*://harvester-caller.ftband.net/*"
+      ],
       "js": [
         "js/storage.js",
         "js/theme.js",
@@ -43,7 +49,11 @@
     },
     {
       "matches": ["*://*/*"],
-      "exclude_matches": ["*://chat.sender.ftband.net/*"],
+      "exclude_matches": [
+        "*://chat.sender.ftband.net/*",
+        "*://cc-fina.ftband.net/*",
+        "*://harvester-caller.ftband.net/*"
+      ],
       "js": [
         "js/storage.js",
         "js/theme.js",

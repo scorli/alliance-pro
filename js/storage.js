@@ -3,6 +3,35 @@
 
   const AP = (window.AlliancePro = window.AlliancePro || {});
 
+  // Сайти телефонії: тут анкета з кодом події ([K00353]), панель завжди в
+  // режимі «Телефонія». Окремий чат там не вибирається (РС не потрібен).
+  const PHONE_HOSTS = ["cc-fina.ftband.net", "harvester-caller.ftband.net"];
+  AP.CHAT_HOST = "chat.sender.ftband.net";
+  AP.PHONE_HOSTS = PHONE_HOSTS;
+  AP.isPhoneSite = function () { return PHONE_HOSTS.indexOf(location.hostname) !== -1; };
+  AP.isChatSite = function () { return location.hostname === AP.CHAT_HOST; };
+  // Глобальний режим роботи (спільний для всіх сайтів — у chrome.storage,
+  // з дзеркалом у localStorage для синхронного доступу): "chat" | "phone" | "both".
+  AP.getMode = function () {
+    const m = getSettings().mode;
+    return (m === "phone" || m === "both") ? m : "chat";
+  };
+  // Поведінка панелі на конкретному сайті визначається самим сайтом:
+  // chat.sender → "chat"; сайти дзвінків → "phone".
+  AP.siteMode = function () {
+    if (AP.isPhoneSite()) return "phone";
+    return "chat";
+  };
+  // Чи має панель працювати на поточному сайті за обраним режимом:
+  // «Чат» → лише chat.sender; «Телефонія» → лише сайти дзвінків; «Чат+Телефонія» → скрізь.
+  AP.matchesMode = function () {
+    const m = AP.getMode();
+    if (m === "both") return AP.isChatSite() || AP.isPhoneSite();
+    if (AP.isChatSite()) return m === "chat";
+    if (AP.isPhoneSite()) return m === "phone";
+    return false;
+  };
+
   const SETTINGS_KEY = "alliancepro_settings";
   const CHATDATA_PREFIX = "alliancepro_chatData_";
   const CHECKBOX_CONFIG_KEY = "alliancepro_checkboxConfig";
@@ -23,7 +52,8 @@
     const defaults = {
       theme: "light",
       accent: null,
-      uiScale: 1,
+      // На сайтах телефонії панель за замовчуванням менша (80%); на чаті — 100%.
+      uiScale: (AP.isPhoneSite && AP.isPhoneSite()) ? 0.8 : 1,
       timerSound: "classic",
       usefulLinks: [],
       resetAfterCopy: false,
@@ -340,7 +370,44 @@
     } catch (e) {}
   }
 
+  // Глобальний режим роботи (Чат/Телефонія) — спільний для всіх доменів.
+  const MODE_KEY = "alliancepro_mode";
+  function normMode(m) { return (m === "phone" || m === "both") ? m : "chat"; }
+  function getGlobalMode(cb) {
+    const fallback = () => normMode(getSettings().mode);
+    if (!hasChromeStorage()) { cb(fallback()); return; }
+    try {
+      chrome.storage.local.get(MODE_KEY, (r) => {
+        const m = (r && r[MODE_KEY]) || fallback();
+        cb(normMode(m));
+      });
+    } catch (e) { cb(fallback()); }
+  }
+  function setGlobalMode(mode, cb) {
+    mode = normMode(mode);
+    patchSettings({ mode }); // дзеркало для синхронного getMode()
+    if (!hasChromeStorage()) { if (cb) cb(); return; }
+    try {
+      const o = {}; o[MODE_KEY] = mode;
+      chrome.storage.local.set(o, () => { if (cb) cb(); });
+    } catch (e) { if (cb) cb(); }
+  }
+  function onModeChange(cb) {
+    if (!hasChromeStorage()) return;
+    try {
+      if (!chrome.storage.onChanged) return;
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === "local" && changes[MODE_KEY]) {
+          cb(normMode(changes[MODE_KEY].newValue));
+        }
+      });
+    } catch (e) {}
+  }
+
   AP.storage = {
+    getGlobalMode,
+    setGlobalMode,
+    onModeChange,
     getSettings,
     getAllowedSites,
     setAllowedSites,

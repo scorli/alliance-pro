@@ -26,12 +26,10 @@
           <span>Soft&nbsp;Pro</span>
         </div>
         <div class="ap-header-actions">
-          <button class="ap-icon-btn ap-mode-btn" id="ap-mode-btn" title="Режим: Чат / Телефонія">💬</button>
-          <button class="ap-icon-btn" id="ap-history-btn" title="Історія (останні 10)">📋</button>
+          <button class="ap-icon-btn" id="ap-history-btn" title="Історія (останні 10)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg></button>
           <button class="ap-icon-btn" id="ap-compact-btn" title="Компактний режим">⊟</button>
           <button class="ap-icon-btn ap-bright-btn" id="ap-settings-btn" title="Налаштування">⚙️</button>
-          <button class="ap-icon-btn" id="ap-home-btn" title="На місце">⌂</button>
-          <button class="ap-icon-btn" id="ap-collapse-btn" title="Згорнути вміст">▾</button>
+          <button class="ap-icon-btn ap-collapse-btn" id="ap-collapse-btn" title="Згорнути вміст">▾</button>
           <button class="ap-icon-btn" id="ap-hide-btn" title="Сховати панель">✕</button>
         </div>
       </div>
@@ -244,28 +242,8 @@
     applyPanelHeight(AP.storage.getSettings().panelHeight);
   }
 
-  function applyModeButton(container) {
-    const btn = container.querySelector("#ap-mode-btn");
-    if (!btn) return;
-    const mode = AP.storage.getSettings().mode || "chat";
-    const phone = mode === "phone";
-    btn.textContent = phone ? "📞" : "💬";
-    btn.title = phone ? "Режим: Телефонія (натисніть для Чату)" : "Режим: Чат (натисніть для Телефонії)";
-    btn.classList.toggle("ap-mode-phone", phone);
-  }
-
   function wireHeader(container) {
-    const modeBtn = container.querySelector("#ap-mode-btn");
-    if (modeBtn) {
-      modeBtn.addEventListener("click", () => {
-        const cur = AP.storage.getSettings().mode || "chat";
-        AP.storage.patchSettings({ mode: cur === "phone" ? "chat" : "phone" });
-        applyModeButton(container);
-        AP.checklist.applyConfig();
-      });
-    }
-    applyModeButton(container);
-
+    // Перемикач Чат/Телефонія перенесено в Налаштування (⚙️).
     const compactBtn = container.querySelector("#ap-compact-btn");
     function applyCompact(on) {
       container.classList.toggle("ap-compact", on);
@@ -292,9 +270,6 @@
     const histBtn = container.querySelector("#ap-history-btn");
     if (histBtn) histBtn.addEventListener("click", () => AP.settings.showHistory());
     container.querySelector("#ap-hide-btn").addEventListener("click", hidePanel);
-    container.querySelector("#ap-home-btn").addEventListener("click", () => {
-      if (AP._resetPanelPosition) AP._resetPanelPosition();
-    });
 
     const collapseBtn = container.querySelector("#ap-collapse-btn");
     const body = container.querySelector("#ap-body");
@@ -420,9 +395,12 @@
   function loadForChat() {
     AP.checklist.load();
     AP.notes.load();
-    AP.operatordesk.autoDetectCid();
+    // Пошук/визначення CID та токени — лише на сайті чату (на телефонії РС немає)
+    if (AP.isChatSite && AP.isChatSite()) {
+      AP.operatordesk.autoDetectCid();
+      if (AP.checklist.maybeOfferPull) AP.checklist.maybeOfferPull();
+    }
     if (AP.checklist.maybeAutoEvent) AP.checklist.maybeAutoEvent();
-    if (AP.checklist.maybeOfferPull) AP.checklist.maybeOfferPull();
   }
 
   function todayKey() {
@@ -440,7 +418,12 @@
   }
 
   function init() {
-    if (window.location.hostname !== "chat.sender.ftband.net") return;
+    const isChat = AP.isChatSite && AP.isChatSite();
+    const isPhone = AP.isPhoneSite && AP.isPhoneSite();
+    if (!isChat && !isPhone) return;
+    // Працюємо лише там, де сайт відповідає обраному режиму:
+    // «Чат» → лише chat.sender; «Телефонія» → лише сайти дзвінків.
+    if (!AP.matchesMode || !AP.matchesMode()) return;
 
     const container = buildPanel();
     if (!container) return;
@@ -460,11 +443,48 @@
     setActiveTab(settings.activeTab || "checklist");
     if (settings.hidden) hidePanel();
 
-    previousChatId = AP.getActiveChatId();
-    loadForChat();
-
-    observeChatChanges();
+    if (isPhone) {
+      // Сайт телефонії: один контекст (__phone__), окремих чатів немає.
+      loadForChat();
+      observePhoneChanges();
+    } else {
+      previousChatId = AP.getActiveChatId();
+      loadForChat();
+      observeChatChanges();
+    }
   }
+
+  // На сайті телефонії клієнт змінюється через навігацію (SPA, інший URL).
+  // При зміні URL скидаємо ручний вибір події й повторно визначаємо її з анкети.
+  function observePhoneChanges() {
+    let lastUrl = location.href;
+    setInterval(() => {
+      if (!AP.matchesMode || !AP.matchesMode()) return; // режим перемкнули на «Чат»
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        const d = AP.storage.getChatData("__phone__");
+        if (d.eventManual) { d.eventManual = false; AP.storage.setChatData("__phone__", d); }
+        loadForChat();
+      }
+    }, 1500);
+  }
+
+  // Реакція на зміну глобального режиму (з налаштувань або з іншого сайту):
+  // показати панель, якщо сайт тепер відповідає режиму, або прибрати, якщо ні.
+  function applyModePresence() {
+    const container = document.getElementById(CONTAINER_ID);
+    const matches = AP.matchesMode && AP.matchesMode();
+    if (matches && !container) {
+      boot();
+    } else if (!matches && container) {
+      container.remove();
+      const r = document.getElementById("ap-restore");
+      if (r) r.remove();
+    } else if (matches && container) {
+      AP.checklist.render();
+    }
+  }
+  AP.applyModePresence = applyModePresence;
 
   function observeChatChanges() {
     const observer = new MutationObserver(() => {
@@ -475,7 +495,7 @@
       const currentChatId = AP.getActiveChatId();
       if (currentChatId !== previousChatId) {
         // Автоархів: перед переходом зберігаємо попередній кейс в історію
-        if (previousChatId && AP.storage.getSettings().mode === "chat") {
+        if (previousChatId && AP.isChatSite && AP.isChatSite()) {
           AP.checklist.archiveChat(previousChatId);
         }
         previousChatId = currentChatId;
@@ -491,6 +511,12 @@
   }
 
   function boot() {
+    // Сайт телефонії: панель кріпиться до body, чекати на чат-холдер не треба.
+    if (AP.isPhoneSite && AP.isPhoneSite()) {
+      init();
+      return;
+    }
+    if (!(AP.isChatSite && AP.isChatSite())) return;
     if (document.querySelector(CHAT_BOX_SELECTOR)) {
       init();
       return;
@@ -505,9 +531,23 @@
     setTimeout(() => obs.disconnect(), 20000);
   }
 
+  // Точка входу: спершу читаємо глобальний режим (спільний між доменами через
+  // chrome.storage), дзеркалимо в localStorage, підписуємось на зміни, далі boot.
+  function start() {
+    if (!((AP.isChatSite && AP.isChatSite()) || (AP.isPhoneSite && AP.isPhoneSite()))) return;
+    AP.storage.getGlobalMode(function (mode) {
+      if (AP.getMode() !== mode) AP.storage.patchSettings({ mode });
+      AP.storage.onModeChange(function (m) {
+        AP.storage.patchSettings({ mode: m });
+        applyModePresence();
+      });
+      boot();
+    });
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+    document.addEventListener("DOMContentLoaded", start);
   } else {
-    boot();
+    start();
   }
 })();

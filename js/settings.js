@@ -234,6 +234,31 @@
     return row;
   }
 
+  function modeRow() {
+    const row = document.createElement("div");
+    row.className = "ap-setting-row";
+    row.appendChild(textBlock(
+      "Режим роботи",
+      "Чат → лише chat.sender; Телефонія → лише сайти дзвінків; Чат+Телефонія → скрізь"
+    ));
+    const sel = document.createElement("select");
+    sel.className = "ap-select";
+    [["chat", "💬 Чат"], ["phone", "📞 Телефонія"], ["both", "💬📞 Чат+Телефонія"]].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      if (v === AP.getMode()) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", () => {
+      AP.storage.setGlobalMode(sel.value, () => {});
+      if (AP.applyModePresence) AP.applyModePresence();
+      if (AP.checklist) AP.checklist.applyConfig();
+    });
+    row.appendChild(sel);
+    return row;
+  }
+
   function soundRow() {
     const row = document.createElement("div");
     row.className = "ap-setting-row";
@@ -372,6 +397,7 @@
     const body = document.createElement("div");
     body.className = "ap-modal-body";
 
+    body.appendChild(modeRow());
     body.appendChild(rowToggle(
       "Темна тема",
       "Світла/темна для панелі та вікон",
@@ -436,7 +462,7 @@
 
     const footer = document.createElement("div");
     footer.className = "ap-modal-footer";
-    footer.textContent = "Soft Pro v4.8.7 by @Nilfa";
+    footer.textContent = "Soft Pro v4.8.8 by @Nilfa";
     wrap.appendChild(footer);
 
     const m = makeModal(wrap);

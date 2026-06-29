@@ -102,6 +102,9 @@
   transition: background 0.15s ease, transform 0.15s ease;
 }
 .ap-header .ap-icon-btn:hover { background: rgba(255, 255, 255, 0.22); }
+.ap-icon-btn svg { display: block; width: 15px; height: 15px; }
+/* «Згорнути вміст» — більша й помітніша */
+.ap-collapse-btn { width: 34px; height: 30px; font-size: 22px; font-weight: 700; line-height: 1; }
 #ap-collapse-btn.ap-rotated { transform: rotate(180deg); }
 
 .ap-body {

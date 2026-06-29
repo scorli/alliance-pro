@@ -233,7 +233,7 @@
 
   /* ===== Стан (через сховище Soft Pro, окремо під кожен чат) ===== */
   function chatId() {
-    const mode = AP.storage.getSettings().mode || "chat";
+    const mode = AP.siteMode();
     if (mode === "phone") return "__phone__";
     return AP.getEffectiveChatId ? AP.getEffectiveChatId() : "__nochat__";
   }
@@ -310,7 +310,7 @@
   function renderModeBanner(data) {
     const banner = document.getElementById("ap-mode-banner");
     if (!banner) return;
-    const mode = AP.storage.getSettings().mode || "chat";
+    const mode = AP.siteMode();
     if (mode === "phone") {
       banner.style.display = "";
       banner.textContent = "📞 Телефонія";
@@ -328,7 +328,7 @@
     box.innerHTML = "";
 
     // У режимі «Телефонія» настрій клієнта не потрібен
-    const mode = AP.storage.getSettings().mode || "chat";
+    const mode = AP.siteMode();
     if (field) field.style.display = mode === "phone" ? "none" : "";
     if (mode === "phone") return;
 
@@ -643,11 +643,15 @@
     if (comment) comment.value = data.comment || "";
 
     // У телефонії немає токенів — ховаємо «Скопіювати» та «Підтягнути»
-    const phone = (AP.storage.getSettings().mode || "chat") === "phone";
+    const phone = AP.siteMode() === "phone";
     const copyBtn = document.getElementById("ap-copy-btn");
     const pullBtn = document.getElementById("ap-pull-btn");
     if (copyBtn) copyBtn.style.display = phone ? "none" : "";
     if (pullBtn) pullBtn.style.display = phone ? "none" : "";
+
+    // У телефонії прибираємо пошук/відкриття РС (ID-рядок повністю)
+    const cidBar = document.querySelector(".ap-cid-bar");
+    if (cidBar) cidBar.style.display = phone ? "none" : "";
   }
 
   function load() { render(); }
@@ -755,7 +759,7 @@
       doneOut.push(`${h} ${list.join("; ")}`);
     });
 
-    const mode = AP.storage.getSettings().mode || "chat";
+    const mode = AP.siteMode();
     const lines = [];
     lines.push(`🏁 Результат: ${resultName(data.result || "interrupted")}`);
     if (mode !== "phone" && data.mood) lines.push(`🙂 Настрій: ${moodLabel(data.mood).replace(/^[^ ]+ /, "")}`);
@@ -879,13 +883,17 @@
     // ВАЖЛИВО: картки попередніх чатів лишаються в DOM (просто приховані), тож
     // беремо лише ВИДИМІ спани — тобто картку саме активного чату. Інакше детект
     // чіплявся б за перший відкритий чат (працювало лише на першому).
-    const spans = Array.from(document.querySelectorAll("span.fixed-width"))
+    // chat.sender → span.fixed-width; анкета телефонії (cc-fina/harvester) →
+    // span.cursor-help (напр. «[K00353]»). Скануємо обидва типи, лише видимі.
+    const spans = Array.from(document.querySelectorAll("span.fixed-width, span.cursor-help"))
       .filter((s) => s.offsetParent !== null);
     const texts = spans.map((s) => s.textContent || "");
     // Запасний варіант — видима область повідомлень активного чату.
     const box = Array.from(document.querySelectorAll(".sf_chat_msg_holder"))
       .find((b) => b.offsetParent !== null);
     if (box) texts.push(box.innerText || box.textContent || "");
+    // На сайтах телефонії запас — увесь видимий текст анкети.
+    if (AP.isPhoneSite && AP.isPhoneSite()) texts.push(document.body.innerText || "");
     // Шукаємо ВСІ K-коди (латинська K або кирилична К) і повертаємо перший,
     // що є в нашому списку. Невідомі коди пропускаємо, а не зупиняємось на них.
     for (let t = 0; t < texts.length; t++) {
