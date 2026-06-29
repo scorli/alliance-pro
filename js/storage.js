@@ -36,7 +36,7 @@
       activeTab: "checklist",
       mode: "chat",
       panelHeight: null,
-      tokensEnabled: true
+      tokensEnabled: false
     };
     let saved = {};
     try {
@@ -61,7 +61,7 @@
   }
 
   function blankChatData() {
-    return { cid: null, event: "341", steps: {}, comment: "", notes: "", mood: null, result: "interrupted", checks: {}, opts: {} };
+    return { cid: null, event: "341", eventManual: false, steps: {}, comment: "", notes: "", mood: null, result: "interrupted", checks: {}, opts: {} };
   }
 
   // Історія останніх кейсів (стирається разом із чатами раз на добу/вручну)
@@ -239,7 +239,7 @@
     return {
       app: "Soft Pro",
       type: "settings-bundle",
-      version: "4.7.1",
+      version: "4.8.2",
       timestamp: new Date().toISOString(),
       settings: getSettings(),
       checkboxConfig: getCheckboxConfig(),

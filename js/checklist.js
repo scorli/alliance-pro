@@ -13,6 +13,19 @@
   const DVZ_SUB_EVENTS = [EVENT_DVZ_356319, EVENT_DVZ_134, EVENT_DVZ_327];
   const AVAILABLE_EVENTS = [EVENT_341, EVENT_349, EVENT_290353, EVENT_DVZ_356319, EVENT_DVZ_134, EVENT_DVZ_327];
 
+  // Мапінг числа з K-коду події (напр. K00134 → "134") на наш профіль.
+  // Якщо коду немає в мапі — подія нам невідома, автодетект її просто ігнорує (без помилки).
+  const KCODE_MAP = {
+    "341": EVENT_341,
+    "349": EVENT_349,
+    "134": EVENT_DVZ_134,
+    "327": EVENT_DVZ_327,
+    "356": EVENT_DVZ_356319,
+    "319": EVENT_DVZ_356319,
+    "290": EVENT_290353,
+    "353": EVENT_290353
+  };
+
   const eventDisplayName = {
     DVZ_GROUP: "ДВЗ",
     [EVENT_DVZ_356319]: "356/319",
@@ -21,7 +34,7 @@
     [EVENT_290353]: "290/353"
   };
 
-  const dvzMonthsOptions = [3, 6, 12, 18, 24, 36];
+  const dvzMonthsOptions = [1, 3, 6, 12, 18, 24, 36];
 
   const MOODS = [
     { key: "positive", name: "Позитивний", emoji: "😊" },
@@ -34,6 +47,7 @@
     { key: "pay", name: "Сплатить", emoji: "✅" },
     { key: "nopay", name: "НеСплатить", emoji: "⛔" },
     { key: "military", name: "Військовий", emoji: "🎖️" },
+    { key: "review", name: "Згоден на перегляд", emoji: "🔎" },
     { key: "nonstd", name: "Нестандарт", emoji: "❓" }
   ];
   function resultName(k) { const r = RESULTS.find((x) => x.key === k); return r ? r.name : "Перервана"; }
@@ -366,6 +380,7 @@
     const switchEvent = (ev) => {
       const d = getData();
       d.event = ev;
+      d.eventManual = true; // оператор обрав вручну — автодетект більше не перемикає
       setData(d);
       render();
     };
@@ -832,7 +847,7 @@
   function applyToken(p) {
     if (!p) return false;
     const d = getData();
-    if (p.e) d.event = sanitizeEventCode(p.e);
+    if (p.e) { d.event = sanitizeEventCode(p.e); d.eventManual = true; }
     d.steps = (p.st && typeof p.st === "object") ? p.st : {};
     d.mood = p.m || null;
     d.result = p.r || "interrupted";
@@ -846,15 +861,62 @@
     const txt = box ? (box.innerText || box.textContent || "") : "";
     return decodeToken(txt);
   }
+  // ===== Автовизначення події за K-кодом на сторінці =====
+  function detectEventFromPage() {
+    let code = null;
+    // спершу у вузьких спанах інфо-картки, де лежить «(K00134)»
+    const spans = document.querySelectorAll("span.fixed-width");
+    for (let i = 0; i < spans.length && !code; i++) {
+      const m = spans[i].textContent.match(/\(?K0*(\d{2,6})\)?/);
+      if (m) code = m[1];
+    }
+    if (!code) {
+      const box = document.querySelector(".sf_chat_msg_holder");
+      const m = box && (box.innerText || box.textContent || "").match(/\(K0*(\d{2,6})\)/);
+      if (m) code = m[1];
+    }
+    if (!code) return null;
+    return KCODE_MAP[code] || null; // невідома подія → null (ігноруємо, без помилки)
+  }
+
+  let eventObserver = null;
+  function maybeAutoEvent() {
+    if (eventObserver) { eventObserver.disconnect(); eventObserver = null; }
+    const startChat = chatId();
+    function tryDetect() {
+      if (chatId() !== startChat) return true;          // чат змінився — зупиняємось
+      const data = getData();
+      if (data.eventManual) return true;                // оператор обрав сам — не чіпаємо
+      const ev = detectEventFromPage();
+      if (ev) {
+        if (ev !== data.event) { data.event = ev; setData(data); render(); }
+        return true;
+      }
+      return false; // ще не знайшли (картка довантажується) або подія невідома
+    }
+    if (tryDetect()) return;
+    const holder = document.querySelector(".sf_chat_msg_holder") || document.body;
+    eventObserver = new MutationObserver(() => {
+      if (tryDetect()) { if (eventObserver) { eventObserver.disconnect(); eventObserver = null; } }
+    });
+    eventObserver.observe(holder, { childList: true, subtree: true });
+    setTimeout(() => { if (eventObserver) { eventObserver.disconnect(); eventObserver = null; } }, 10000);
+  }
+
   async function pull() {
     let p = scanChatForToken();
     if (!p) { try { p = decodeToken(await navigator.clipboard.readText()); } catch (e) {} }
-    if (!p) { flashStatus("Токен не знайдено"); return false; }
-    applyToken(p);
-    flashStatus("Підтягнуто ✓");
-    const banner = document.getElementById("ap-sync-banner");
-    if (banner) banner.style.display = "none";
-    return true;
+    if (p) {
+      applyToken(p);
+      flashStatus("Підтягнуто ✓");
+      const banner = document.getElementById("ap-sync-banner");
+      if (banner) banner.style.display = "none";
+      return true;
+    }
+    // У чаті/буфері не знайдено — пропонуємо вставити токен вручну
+    if (AP.settings && AP.settings.showTokenInput) AP.settings.showTokenInput();
+    else flashStatus("Токен не знайдено");
+    return false;
   }
   // Автодетект токена — за тією ж схемою, що й авто-ID: одразу + спостерігач ~10с
   let pullObserver = null;
@@ -947,7 +1009,7 @@
   function restoreSnapshot(snap) {
     if (!snap) return;
     const data = getData();
-    if (snap.event) data.event = sanitizeEventCode(snap.event);
+    if (snap.event) { data.event = sanitizeEventCode(snap.event); data.eventManual = true; }
     data.steps = snap.steps ? JSON.parse(JSON.stringify(snap.steps)) : {};
     data.mood = snap.mood || null;
     data.comment = snap.comment || "";
@@ -1008,7 +1070,7 @@
   AP.checklist = {
     render, load, save: function () {}, buildText, copy, reset, bindControls, applyConfig,
     restoreSnapshot, archiveCurrent, archiveChat,
-    encodeToken, decodeToken, applyToken, pull, maybeOfferPull,
+    encodeToken, decodeToken, applyToken, pull, maybeOfferPull, maybeAutoEvent,
     eventTitle: getEventTitle, resultName, resultEmoji
   };
 })();

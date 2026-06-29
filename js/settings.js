@@ -436,7 +436,7 @@
 
     const footer = document.createElement("div");
     footer.className = "ap-modal-footer";
-    footer.textContent = "Soft Pro v4.7.1 by @Nilfa";
+    footer.textContent = "Soft Pro v4.8.2 by @Nilfa";
     wrap.appendChild(footer);
 
     const m = makeModal(wrap);
@@ -998,7 +998,7 @@
 
   function exportConfig() {
     downloadJson(
-      { app: "Soft Pro", type: "checkboxes", version: "4.7.1", timestamp: new Date().toISOString(), checkboxConfig: workingConfig },
+      { app: "Soft Pro", type: "checkboxes", version: "4.8.2", timestamp: new Date().toISOString(), checkboxConfig: workingConfig },
       `alliance-pro-checkboxes-${stamp()}.json`
     );
   }
@@ -1041,6 +1041,49 @@
         day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
       });
     } catch (e) { return iso; }
+  }
+
+  // Ручне вставлення токена (коли в чаті/буфері не знайдено)
+  function showTokenInput() {
+    const wrap = document.createElement("div");
+    const { h, x } = header("Підтягнути з токена");
+    wrap.appendChild(h);
+
+    const body = document.createElement("div");
+    body.className = "ap-modal-body";
+    const info = document.createElement("div");
+    info.className = "ap-hist-meta";
+    info.textContent = "Токен у чаті не знайдено. Встав сюди скопійований текст (із токеном):";
+    const ta = document.createElement("textarea");
+    ta.className = "ap-textarea";
+    ta.rows = 4;
+    ta.placeholder = "Встав текст із токеном…";
+    body.appendChild(info);
+    body.appendChild(ta);
+    wrap.appendChild(body);
+
+    const footer = document.createElement("div");
+    footer.className = "ap-modal-footer ap-hist-footer";
+    const applyBtn = document.createElement("button");
+    applyBtn.className = "ap-btn ap-btn-primary";
+    applyBtn.textContent = "Підтягнути";
+    applyBtn.addEventListener("click", () => {
+      const p = AP.checklist && AP.checklist.decodeToken ? AP.checklist.decodeToken(ta.value) : null;
+      if (p && AP.checklist.applyToken) {
+        AP.checklist.applyToken(p);
+        removeModal();
+      } else {
+        info.textContent = "Токен не розпізнано. Перевір, що вставлено правильний текст із токеном.";
+        info.style.color = "var(--ap-danger)";
+      }
+    });
+    footer.appendChild(applyBtn);
+    wrap.appendChild(footer);
+
+    const m = makeModal(wrap);
+    x.addEventListener("click", m.close);
+    AP.theme.apply(AP.theme.current());
+    setTimeout(() => ta.focus(), 50);
   }
 
   function showHistoryItem(item) {
@@ -1163,5 +1206,5 @@
     AP.theme.apply(AP.theme.current());
   }
 
-  AP.settings = { showSettings, showCheckboxConfig, showHistory };
+  AP.settings = { showSettings, showCheckboxConfig, showHistory, showTokenInput };
 })();

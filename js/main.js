@@ -52,6 +52,7 @@
               <button id="ap-cid-edit" class="ap-icon-btn ap-cid-icon" title="Редагувати ID">✎</button>
               <button id="ap-cid-clear" class="ap-icon-btn ap-cid-icon" title="Очистити ID">⌫</button>
               <button id="ap-open-desktop" class="ap-btn ap-btn-accent">Відкрити РС</button>
+              <button id="ap-harvester" class="ap-btn ap-btn-ghost" title="Запустити HARVESTER на сторінці">HARVESTER</button>
             </div>
 
             <div id="ap-mode-banner" class="ap-mode-banner" style="display:none"></div>
@@ -237,6 +238,11 @@
       p.classList.toggle("ap-pane-active", p.dataset.pane === tab);
     });
     AP.storage.patchSettings({ activeTab: tab });
+    // Зміна висоти — лише на чек-листі; інші вкладки фіксовані (авто-висота)
+    const c = document.getElementById(CONTAINER_ID);
+    const handle = c && c.querySelector("#ap-resize-handle");
+    if (handle) handle.style.display = tab === "checklist" ? "" : "none";
+    applyPanelHeight(AP.storage.getSettings().panelHeight);
   }
 
   function applyModeButton(container) {
@@ -328,6 +334,11 @@
     container.querySelector("#ap-open-desktop").addEventListener("click", () => AP.operatordesk.openClientDesktop());
     container.querySelector("#ap-cid-edit").addEventListener("click", () => AP.operatordesk.editClientCid());
     container.querySelector("#ap-cid-clear").addEventListener("click", () => AP.operatordesk.clearClientCid());
+    const harvBtn = container.querySelector("#ap-harvester");
+    if (harvBtn) harvBtn.addEventListener("click", () => {
+      const ok = AP.operatordesk.triggerHarvester && AP.operatordesk.triggerHarvester();
+      if (!ok) AP.settings && AP.settings.toast ? AP.settings.toast("HARVESTER не знайдено") : console.warn("HARVESTER button not found");
+    });
   }
 
   function clampHeight(h) {
@@ -343,6 +354,13 @@
     // у згорнутому стані висота авто (тільки шапка)
     const b = c.querySelector("#ap-body");
     if (b && b.classList.contains("ap-collapsed")) {
+      c.style.height = "";
+      c.style.maxHeight = "";
+      return;
+    }
+    // Зміна висоти діє лише на чек-листі; інші вкладки — фіксовані (авто-висота)
+    const checklistActive = !!c.querySelector('.ap-pane-active[data-pane="checklist"]');
+    if (!checklistActive) {
       c.style.height = "";
       c.style.maxHeight = "";
       return;
@@ -409,6 +427,7 @@
     AP.checklist.load();
     AP.notes.load();
     AP.operatordesk.autoDetectCid();
+    if (AP.checklist.maybeAutoEvent) AP.checklist.maybeAutoEvent();
     if (AP.checklist.maybeOfferPull) AP.checklist.maybeOfferPull();
   }
 

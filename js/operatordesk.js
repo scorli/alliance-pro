@@ -156,11 +156,20 @@
     });
   }
 
+  // Натискає рідну кнопку HARVESTER на сторінці чату (серверна дія Sender)
+  function triggerHarvester() {
+    const btns = Array.from(document.querySelectorAll("button.sender_form_has_action, button"));
+    const b = btns.find((el) => el.textContent && el.textContent.trim().toUpperCase() === "HARVESTER");
+    if (b) { b.click(); return true; }
+    return false;
+  }
+
   AP.operatordesk = {
     openClientDesktop,
     updateClientIdDisplay,
     autoDetectCid,
     editClientCid,
-    clearClientCid
+    clearClientCid,
+    triggerHarvester
   };
 })();
